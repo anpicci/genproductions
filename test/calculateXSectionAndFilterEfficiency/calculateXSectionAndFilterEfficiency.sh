@@ -15,24 +15,23 @@ EVENTS='1000000'
 MCM=False
 SKIPEXISTING=False
 
-DEBUG=False
-# DEBUG=True
+#DEBUG=False
+DEBUG=True
 
 while getopts f:c:d:n:m:s option
 do
     case "${option}"
     in
-            f) FILE=${OPTARG};;
-            c) CAMPAIGN=${OPTARG};;
-            d) DATATIER=${OPTARG};;
-            n) EVENTS=${OPTARG};;
-            m) MCM=True;;
-            s) SKIPEXISTING=True;;
+            f)FILE=${OPTARG};;
+            c)CAMPAIGN=${OPTARG};;
+            d)DATATIER=${OPTARG};;
+            n)EVENTS=${OPTARG};;
+            m)MCM=True;;
+            s)SKIPEXISTING=True;;
     esac
 done
 
-while read -r dataset
-do
+while read -r dataset ; do
     name="$dataset"
     echo "Name read from file - $name"
     
@@ -53,7 +52,6 @@ do
       exit 1
     fi
     echo ""
-    
 done < "$FILE"
 
 

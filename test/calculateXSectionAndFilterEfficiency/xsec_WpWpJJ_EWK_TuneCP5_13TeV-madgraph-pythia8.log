@@ -1,0 +1,66 @@
+15-Oct-2020 17:32:35 CEST  Initiating request to open file root://eoscms.cern.ch//eos/cms/store/mc/RunIIFall17MiniAODv2/WpWpJJ_EWK_TuneCP5_13TeV-madgraph-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/120000/50308027-E8C3-E811-864C-0CC47A00A814.root
+%MSG-w XrdAdaptorInternal:  file_open 15-Oct-2020 17:32:36 CEST pre-events
+Failed to open file at URL root://eoscms.cern.ch:1094//eos/cms/store/mc/RunIIFall17MiniAODv2/WpWpJJ_EWK_TuneCP5_13TeV-madgraph-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/120000/50308027-E8C3-E811-864C-0CC47A00A814.root.
+%MSG
+%MSG-w XrdAdaptorInternal:  file_open 15-Oct-2020 17:32:36 CEST pre-events
+Failed to open file at URL root://eoscms.cern.ch:1094//eos/cms/store/mc/RunIIFall17MiniAODv2/WpWpJJ_EWK_TuneCP5_13TeV-madgraph-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/120000/50308027-E8C3-E811-864C-0CC47A00A814.root?tried=.
+%MSG
+15-Oct-2020 17:32:36 CEST  Fallback request to file root://xrootd-cms.infn.it//store/mc/RunIIFall17MiniAODv2/WpWpJJ_EWK_TuneCP5_13TeV-madgraph-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/120000/50308027-E8C3-E811-864C-0CC47A00A814.root
+%MSG-w XrdAdaptor:  file_open 15-Oct-2020 17:32:38 CEST pre-events
+Data is served from T2_IT_Pisa instead of original site infn.it
+%MSG
+15-Oct-2020 17:32:41 CEST  Successfully opened file root://xrootd-cms.infn.it//store/mc/RunIIFall17MiniAODv2/WpWpJJ_EWK_TuneCP5_13TeV-madgraph-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/120000/50308027-E8C3-E811-864C-0CC47A00A814.root
+Begin processing the 1st record. Run 1, Event 9805, LumiSection 15 on stream 0 at 15-Oct-2020 17:32:42.392 CEST
+      0.019287      0.000199      0.000038             1
+      0.006717      0.000069      0.000038             2
+ 
+15-Oct-2020 17:32:42 CEST  Closed file root://xrootd-cms.infn.it//store/mc/RunIIFall17MiniAODv2/WpWpJJ_EWK_TuneCP5_13TeV-madgraph-pythia8/MINIAODSIM/PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/120000/50308027-E8C3-E811-864C-0CC47A00A814.root
+
+------------------------------------
+GenXsecAnalyzer:
+------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+Overall cross-section summary 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Process		xsec_before [pb]		passed	nposw	nnegw	tried	nposw	nnegw 	xsec_match [pb]			accepted [%]	 event_eff [%]
+0		1.929e-02 +/- 1.993e-04		519	518	1	519	518	1	1.929e-02 +/- 1.993e-04		100.0 +/- 0.0	100.0 +/- 0.0
+1		6.717e-03 +/- 6.939e-05		181	181	0	181	181	0	6.717e-03 +/- 6.939e-05		100.0 +/- 0.0	100.0 +/- 0.0
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+Total		2.600e-02 +/- 2.110e-04		700	699	1	700	699	1	2.600e-02 +/- 2.110e-04		100.0 +/- 0.0	100.0 +/- 0.0
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Before matching: total cross section = 2.600e-02 +- 2.110e-04 pb
+After matching: total cross section = 2.600e-02 +- 2.110e-04 pb
+Matching efficiency = 1.0 +/- 0.0   [TO BE USED IN MCM]
+Filter efficiency (taking into account weights)= (698) / (698) = 1.000e+00 +- 0.000e+00
+Filter efficiency (event-level)= (700) / (700) = 1.000e+00 +- 0.000e+00    [TO BE USED IN MCM]
+
+After filter: final cross section = 2.600e-02 +- 2.110e-04 pb
+After filter: final fraction of events with negative weights = 1.429e-03 +- 2.039e-06
+After filter: final equivalent lumi for 1M events (1/fb) = 3.824e+04 +- 3.117e+02
+
+=============================================
+
+MessageLogger Summary
+
+ type     category        sev    module        subroutine        count    total
+ ---- -------------------- -- ---------------- ----------------  -----    -----
+    1 GenXSecAnalyzer      -w GenXSecAnalyzer:                      16       16
+    2 XrdAdaptor           -w file_open                              1        1
+    3 XrdAdaptorInternal   -w file_open                              2        2
+    4 fileAction           -s file_close                             1        1
+    5 fileAction           -s file_open                              3        3
+
+ type    category    Examples: run/evt        run/evt          run/evt
+ ---- -------------------- ---------------- ---------------- ----------------
+    1 GenXSecAnalyzer      PostGlobalEndRun PostGlobalEndRun PostGlobalEndRun
+    2 XrdAdaptor           pre-events                        
+    3 XrdAdaptorInternal   pre-events       pre-events       
+    4 fileAction           PostGlobalEndRun                  
+    5 fileAction           pre-events       pre-events       pre-events
+
+Severity    # Occurrences   Total Occurrences
+--------    -------------   -----------------
+Warning                19                  19
+System                  4                   4
+
+dropped waiting message count 0
