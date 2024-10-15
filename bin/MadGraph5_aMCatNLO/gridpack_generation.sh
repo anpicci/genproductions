@@ -34,10 +34,6 @@ make_tarball () {
     mkdir InputCards
     cp $CARDSDIR/${name}*.* InputCards
 
-    if [ -e $CARDSDIR/BIAS ]; then
-      cp -r $CARDSDIR/BIAS InputCards/
-    fi
-
     EXTRA_TAR_ARGS=""
     if [ -e $CARDSDIR/${name}_externaltarball.dat ]; then
         EXTRA_TAR_ARGS="external_tarball header_for_madspin.txt "
@@ -46,7 +42,7 @@ make_tarball () {
     if [ -e merge.pl ]; then
         EXTRA_TAR_ARGS+="merge.pl "
     fi
-    XZ_OPT="$XZ_OPT" tar -cJpf ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_tarball.tar.xz mgbasedir process runcmsgrid.sh gridpack_generation*.log InputCards $EXTRA_TAR_ARGS
+    XZ_OPT="$XZ_OPT" tar -cJpsf ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_tarball.tar.xz mgbasedir process runcmsgrid.sh gridpack_generation*.log InputCards $EXTRA_TAR_ARGS
 
     echo "Gridpack created successfully at ${PRODHOME}/${name}_${scram_arch}_${cmssw_version}_tarball.tar.xz"
     echo "End of job"
@@ -83,23 +79,20 @@ make_gridpack () {
       echo $CARDSDIR/${name}_run_card.dat " does not exist!"
       if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
     fi
-    
+
+    if [ -e $CARDSDIR/${name}_madspin_card.dat ]; then
+      if grep -F "Nevents_for_max_weight" $CARDSDIR/${name}_madspin_card.dat; then
+        sed -i 's|Nevents_for_max_weight|Nevents_for_max_weigth|g' $CARDSDIR/${name}_madspin_card.dat
+        echo "Unfixing the typo fix : Nevents_for_max_weight -> Nevents_for_max_weigth"
+      fi
+    fi
+
     # avoid compute_widths in customizecards 
     if [ -e $CARDSDIR/${name}_customizecards.dat ]; then
         if grep -F "compute_widths" $CARDSDIR/${name}_customizecards.dat ; then
             echo "<<compute_widths X>> is used in your customizecards.dat"
             echo "This could be problematic from time to time, so instead use <<set decay wX AUTO>> for width computations. Please take a look at \"compute_widths\" under \"Troubleshooting_and_Suggestions\" section."
             echo "https://twiki.cern.ch/twiki/bin/view/CMS/QuickGuideMadGraph5aMCatNLO#Troubleshooting_and_Suggestions"
-            exit 1;
-        fi
-    fi
-
-    # avoid compute_widths in customizecards 
-    if [ -e $CARDSDIR/${name}_madspin_card.dat ]; then
-        if grep -F "Nevents_for_max_weigth" $CARDSDIR/${name}_madspin_card.dat ; then
-            echo "Nevents_for_max_weigth typo is fixed to Nevents_for_max_weight in MGv2.7.x releases."
-            echo "$CARDSDIR/${name}_madspin_card.dat contains Nevents_for_max_weigth instead of Nevents_for_max_weight."
-            echo "Please correct the typo."
             exit 1;
         fi
     fi
@@ -136,7 +129,7 @@ make_gridpack () {
     MGBASEDIR=mgbasedir
     
     MG_EXT=".tar.gz"
-    MG=MG5_aMC_v2.9.18$MG_EXT
+    MG=MG5_aMC_v2.6.5$MG_EXT
     MGSOURCE=https://cms-project-generators.web.cern.ch/cms-project-generators/$MG
     
     MGBASEDIRORIG=$(echo ${MG%$MG_EXT} | tr "." "_")
@@ -170,19 +163,22 @@ make_gridpack () {
       cd ${name}_gridpack ; mkdir -p work ; cd work
       WORKDIR=`pwd`
       eval `scram runtime -sh`
-
-      if [[ $queue == *"condor"* ]]; then
-        echo "Use HTCondor for gridpack generation"
-        source ${PRODHOME}/Utilities/source_condor.sh
-      fi
-
+    
+      # use python 2.7 and include python bindings from default to allow "import htcondor" after cmsenv
+      set +u 
+      if [ ! -z "${PYTHON27PATH}" ] ; then export PYTHONPATH=${PYTHON27PATH} ; fi 
+      if [ ! -z "${PYTHON_BINDINGS}" ] ; then export PYTHONPATH=${PYTHONPATH}:${PYTHON_BINDINGS} ; fi
+      set -u 
+        
       #############################################
       #Copy, Unzip and Delete the MadGraph tarball#
       #############################################
       wget --no-check-certificate ${MGSOURCE}
       tar xzf ${MG}
       rm "$MG"
-    
+      #cp -r /afs/cern.ch/work/a/apiccine/mc_geoSMEFT/genproductions/bin/MadGraph5_aMCatNLO/ggtt_UFO3 $MGBASEDIRORIG/models
+      cp -r /afs/cern.ch/work/a/apiccine/mc_geoSMEFT/genproductions/bin/MadGraph5_aMCatNLO/ggtt_UFO $MGBASEDIRORIG/models
+
       #############################################
       #Apply any necessary patches on top of official release
       #############################################
@@ -190,33 +186,25 @@ make_gridpack () {
       cd $MGBASEDIRORIG
       cat $PRODHOME/patches/*.patch | patch -p1
       cp -r $PRODHOME/PLUGIN/CMS_CLUSTER/ PLUGIN/ 
-
-      # Copy bias module (cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias)
-      # Expected structure: 
-      # $CARDSDIR/BIAS/{module_name}/...
-      #     .../makefile (mandatory)
-      #     .../{module_name}.f (mandatory)
-      #     .../bias_dependencies (optional)
-      if [ -e $CARDSDIR/BIAS ]; then
-        echo "copying bias module folder. Current dir:"
-        pwd
-        ls -lrth
-        cp -r $CARDSDIR/BIAS/* Template/LO/Source/BIAS
+      # Intended for expert use only!
+      if ls $CARDSDIR/${name}*.patch; then
+        echo "    WARNING: Applying custom user patch. I hope you know what you're doing!"
+        cat $CARDSDIR/${name}*.patch | patch -p1
       fi
     
       LHAPDFCONFIG=`echo "$LHAPDF_DATA_PATH/../../bin/lhapdf-config"`
     
       LHAPDFINCLUDES=`$LHAPDFCONFIG --incdir`
       LHAPDFLIBS=`$LHAPDFCONFIG --libdir`
+      export BOOSTINCLUDES=`scram tool tag boost INCLUDE`
     
       echo "set auto_update 0" > mgconfigscript
       echo "set automatic_html_opening False" >> mgconfigscript
-      echo "set auto_convert_model True" >> mgconfigscript
       if [ $iscmsconnect -gt 0 ]; then
         echo "set output_dependencies internal" >> mgconfigscript
       fi
     #  echo "set output_dependencies internal" >> mgconfigscript
-      echo "set lhapdf_py3 $LHAPDFCONFIG" >> mgconfigscript
+      echo "set lhapdf $LHAPDFCONFIG" >> mgconfigscript
     #   echo "set ninja $PWD/HEPTools/lib" >> mgconfigscript
     
       if [ "$queue" == "local" ]; then
@@ -262,7 +250,7 @@ make_gridpack () {
           fi      
       fi
     
-      echo "save options --all" >> mgconfigscript
+      echo "save options" >> mgconfigscript
     
       ./bin/mg5_aMC mgconfigscript
     
@@ -298,24 +286,15 @@ make_gridpack () {
         set +u
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 0; else exit 0; fi
       fi
-
-      cd $MGBASEDIRORIG
-      # Intended for expert use only!
-      if ls $CARDSDIR/${name}*.patch; then
-        echo "    WARNING: Applying custom user patch. I hope you know what you're doing!"
-        cat $CARDSDIR/${name}*.patch | patch -p 1
-      fi
-      cd $WORKDIR
     
       echo `pwd`
 
       cp $CARDSDIR/${name}_proc_card.dat ${name}_proc_card.dat
       
-      #*FIXME* workaround for broken cluster_local_path & lhapdf_py3 handling.
+      #*FIXME* workaround for broken cluster_local_path handling. 
       # This needs to happen before the code-generation step, as fortran templates
       # are modified based on this parameter.
       echo "cluster_local_path = `${LHAPDFCONFIG} --datadir`" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt 
-      echo "lhapdf_py3 = $LHAPDFCONFIG" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
     
       ########################
       #Run the code-generation step to create the process directory
@@ -342,7 +321,7 @@ make_gridpack () {
       fi
 	
       is5FlavorScheme=0
-      if tail -n 999 $LOGFILE | grep -q -e "^p *=.*b\~.*b" -e "^p *=.*b.*b\~"; then 
+      if tail -n 20 $LOGFILE | grep -q -e "^p *=.*b\~.*b" -e "^p *=.*b.*b\~"; then 
         is5FlavorScheme=1
       fi
     
@@ -362,10 +341,9 @@ make_gridpack () {
          echo "cluster_type = cms_condor_spool" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
        fi
     
-      # Previous settings get erased after
+      # Previous cluster_local_path setting  gets erased after
       # code-generation mg5_aMC execution, set it up again before the integrate step.
-      echo "cluster_local_path = `${LHAPDFCONFIG} --datadir`" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
-      echo "lhapdf_py3 = $LHAPDFCONFIG" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt
+      echo "cluster_local_path = `${LHAPDFCONFIG} --datadir`" >> ./$MGBASEDIRORIG/input/mg5_configuration.txt    
       
       if [ -e $CARDSDIR/${name}_patch_me.sh ]; then
           echo "Patching generated matrix element code with " $CARDSDIR/${name}_patch_me.sh
@@ -396,16 +374,10 @@ make_gridpack () {
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi
       fi
       cd $WORKDIR
-
+    
       eval `scram runtime -sh`
       export BOOSTINCLUDES=`scram tool tag boost INCLUDE`
-
-      # need to source condor once more if the codegen & integrate steps are separated
-      if [[ $queue == *"condor"* ]]; then
-        echo "Use HTCondor for gridpack generation"
-        source ${PRODHOME}/Utilities/source_condor.sh
-      fi
-
+    
       #if lhapdf6 external is available then above points to lhapdf5 and needs to be overridden
       LHAPDF6TOOLFILE=$CMSSW_BASE/config/toolbox/$SCRAM_ARCH/tools/available/lhapdf6.xml
       if [ -e $LHAPDF6TOOLFILE ]; then
@@ -602,6 +574,7 @@ make_gridpack () {
       
       echo "cleaning temporary output"
       mv $WORKDIR/processtmp/pilotrun_gridpack.tar.gz $WORKDIR/
+      mv $WORKDIR/processtmp/Events/pilotrun/unweighted_events.lhe.gz $WORKDIR/
       rm -rf processtmp
       mkdir process
       cd process
@@ -609,11 +582,6 @@ make_gridpack () {
       tar -xzf $WORKDIR/pilotrun_gridpack.tar.gz
       echo "cleaning temporary gridpack"
       rm $WORKDIR/pilotrun_gridpack.tar.gz
-
-      # as of mg29x, it does not generate any event if 'True = gridpack' in the run card
-      # generate a few events manually
-      ./run.sh 1000 234567 # nevents seed
-      mv events.lhe.gz $WORKDIR/unweighted_events.lhe.gz
 
       # precompile reweighting if necessary
       if [ -e $CARDSDIR/${name}_reweight_card.dat ]; then
@@ -656,11 +624,8 @@ make_gridpack () {
     if [ $is5FlavorScheme -eq 1 ]; then
       pdfExtraArgs+="--is5FlavorScheme "
     fi 
-    if grep -q -e "\$DEFAULT_nPDF_SETS" $CARDSDIR/${name}_run_card.dat; then
-      pdfExtraArgs+="--ion Pb "
-    fi
     
-    pdfSysArgs=$(python3 ${script_dir}/getMG5_aMC_PDFInputs.py -f systematics -c run3 $pdfExtraArgs)
+    pdfSysArgs=$(python ${script_dir}/getMG5_aMC_PDFInputs.py -f systematics -c 2017 $pdfExtraArgs)
     sed -i s/PDF_SETS_REPLACE/${pdfSysArgs}/g runcmsgrid.sh
     
     
@@ -708,18 +673,15 @@ jobstep=${4}
 
 # sync default cmssw with the current OS 
 export SYSTEM_RELEASE=`cat /etc/redhat-release`
-echo $SYSTEM_RELEASE
 
 # set scram_arch 
 if [ -n "$5" ]; then
     scram_arch=${5}
 else
-    if [[ $SYSTEM_RELEASE == *"release 7"* ]]; then 
-        scram_arch=slc7_amd64_gcc10 
-    elif [[ $SYSTEM_RELEASE == *"release 8"* ]]; then
-        scram_arch=el8_amd64_gcc10
-    elif [[ $SYSTEM_RELEASE == *"release 9"* ]]; then
-        scram_arch=el9_amd64_gcc11
+    if [[ $SYSTEM_RELEASE == *"release 6"* ]]; then 
+        scram_arch=slc6_amd64_gcc700 
+    elif [[ $SYSTEM_RELEASE == *"release 7"* ]]; then 
+        scram_arch=slc7_amd64_gcc700 
     else 
         echo "No default scram_arch for current OS!"
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi        
@@ -730,12 +692,10 @@ fi
 if [ -n "$6" ]; then
     cmssw_version=${6}
 else
-    if [[ $SYSTEM_RELEASE == *"release 7"* ]]; then 
-        cmssw_version=CMSSW_12_4_8
-    elif [[ $SYSTEM_RELEASE == *"release 8"* ]]; then
-        cmssw_version=CMSSW_12_4_8
-    elif [[ $SYSTEM_RELEASE == *"release 9"* ]]; then
-	cmssw_version=CMSSW_13_2_9
+    if [[ $SYSTEM_RELEASE == *"release 6"* ]]; then 
+        cmssw_version=CMSSW_10_2_24_patch1 
+    elif [[ $SYSTEM_RELEASE == *"release 7"* ]]; then 
+        cmssw_version=CMSSW_10_6_19 
     else 
         echo "No default CMSSW for current OS!"
         if [ "${BASH_SOURCE[0]}" != "${0}" ]; then return 1; else exit 1; fi        
