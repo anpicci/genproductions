@@ -1,0 +1,13 @@
+set param_card mass   6  172.5 
+set param_card yukawa 6  172.5 
+set param_card mass   25 125.0 
+
+set param_card c3G 0.0000001
+set param_card cuG 0
+
+set param_card c8Q2G2D1 0
+set param_card c8Q2G2D2 0
+set param_card c8Q2G2D3 0
+set param_card c8u2G2D1 0
+set param_card c8u2G2D2 0
+set param_card c8u2G2D3 0
